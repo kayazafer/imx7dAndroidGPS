@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
  *
-   zaferkaya1960@hotmail.com
+ *  2020 zaferkaya1960@hotmail.com
 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -339,7 +339,7 @@ public class GnssLocationProvider implements LocationProviderInterface {
     // for calculating time to first fix
     private long mFixRequestTime = 0;
     // time to first fix for most recent session
-    private int mTimeToFirstFix = 0;
+    private int mTimeToFirstFix = -1; //zafer
     // time we received our last fix
     private long mLastFixTime;
 
@@ -1424,7 +1424,7 @@ public class GnssLocationProvider implements LocationProviderInterface {
     private void startNavigating(boolean singleShot) {
         if (!mStarted) {
             if (DEBUG) Log.d(TAG, "startNavigating, singleShot is " + singleShot);
-            mTimeToFirstFix = 0;
+            mTimeToFirstFix = -1; //zafer
             mLastFixTime = 0;
             mStarted = true;
             mSingleShot = singleShot;
@@ -1476,7 +1476,11 @@ public class GnssLocationProvider implements LocationProviderInterface {
 
             // reset SV count to zero
             updateStatus(LocationProvider.TEMPORARILY_UNAVAILABLE, 0);
-            mFixRequestTime = System.currentTimeMillis();
+
+//zafer     mFixRequestTime = System.currentTimeMillis();
+            mFixRequestTime = SystemClock.elapsedRealtime();
+	    mTimeToFirstFix = 0;
+
             if (!hasCapability(GPS_CAPABILITY_SCHEDULING)) {
                 // set timer to give up if we do not receive a fix within NO_FIX_TIMEOUT
                 // and our fix interval is not short
@@ -1494,7 +1498,7 @@ public class GnssLocationProvider implements LocationProviderInterface {
             mStarted = false;
             mSingleShot = false;
             native_stop();
-            mTimeToFirstFix = 0;
+            mTimeToFirstFix = -1; //zafer
             mLastFixTime = 0;
             mLocationFlags = LOCATION_INVALID;
 
@@ -1574,10 +1578,12 @@ public class GnssLocationProvider implements LocationProviderInterface {
             }
         }
 
-        mLastFixTime = System.currentTimeMillis();
+//zafer mLastFixTime = System.currentTimeMillis();
+        mLastFixTime = SystemClock.elapsedRealtime();
         // report time to first fix
         if (mTimeToFirstFix == 0 && (flags & LOCATION_HAS_LAT_LONG) == LOCATION_HAS_LAT_LONG) {
             mTimeToFirstFix = (int)(mLastFixTime - mFixRequestTime);
+
             if (DEBUG) Log.d(TAG, "TTFF: " + mTimeToFirstFix);
 
             // notify status listeners
@@ -1684,7 +1690,9 @@ public class GnssLocationProvider implements LocationProviderInterface {
         updateStatus(mStatus, usedInFixCount);
 
         if (mNavigating && mStatus == LocationProvider.AVAILABLE && mLastFixTime > 0 &&
-            System.currentTimeMillis() - mLastFixTime > RECENT_FIX_TIMEOUT) {
+//zafer     System.currentTimeMillis() - mLastFixTime > RECENT_FIX_TIMEOUT) {
+            SystemClock.elapsedRealtime() - mLastFixTime > RECENT_FIX_TIMEOUT) {
+
             // send an intent to notify that the GPS is no longer receiving fixes.
             Intent intent = new Intent(LocationManager.GPS_FIX_CHANGE_ACTION);
             intent.putExtra(LocationManager.EXTRA_GPS_ENABLED, false);
@@ -2286,7 +2294,8 @@ public class GnssLocationProvider implements LocationProviderInterface {
         public void onLocationChanged(Location location) {
             // this callback happens on mHandler looper
             if (LocationManager.NETWORK_PROVIDER.equals(location.getProvider()) &&
-	        (System.currentTimeMillis() - mLastFixTime > RECENT_FIX_TIMEOUT)) // if not receiving fixes. zafer
+//zafer	        (System.currentTimeMillis() - mLastFixTime > RECENT_FIX_TIMEOUT)) // if not receiving fixes. zafer
+	        (SystemClock.elapsedRealtime() - mLastFixTime > RECENT_FIX_TIMEOUT)) // if not receiving fixes. zafer
 			handleUpdateLocation(location);
         }
         @Override
